@@ -1,17 +1,63 @@
 // src/components/Dashboard/StudentDashboard.js
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { Button, Container, Typography } from "@mui/material";
 
 function StudentDashboard() {
   const navigate = useNavigate();
 
   return (
-    <div className="dashboard">
-      <h2>Student Dashboard</h2>
-      <button onClick={() => navigate("/upcoming-events")}>Upcoming Events</button>
-      <button onClick={() => navigate("/registered-events")}>Registered Events</button>
-      <button onClick={() => navigate("/")}>Logout</button>
-    </div>
+    <Container className="dash-container" variant="large">
+      <Typography
+        variant="h4"
+        sx={{ fontWeight: "bold", marginBottom: "6rem" }}
+      >
+        Student Dashboard
+      </Typography>
+      <Button
+        variant="contained"
+        onClick={() => navigate("/upcoming-events")}
+        style={{
+          marginBottom: "10px",
+          minWidth: "250px",
+          fontSize: "1.2rem",
+          backgroundColor: "#4CAF50",
+        }}
+        size="large"
+        className="normal-button"
+      >
+        Upcoming Events
+      </Button>
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={() => navigate("/registered-events")}
+        size="large"
+        sx={{
+          marginBottom: "10px",
+          minWidth: "250px",
+          fontSize: "1.2rem",
+          backgroundColor: "#FFC107",
+          color: "black",
+        }}
+        className="normal-button"
+      >
+        Registered Events
+      </Button>
+      <Button
+        variant="contained"
+        color="secondary"
+        onClick={() => navigate("/")}
+        sx={{
+          marginTop: "6rem",
+          minWidth: "220px",
+          fontSize: "1.2rem",
+          backgroundColor: "#F44336",
+        }}
+      >
+        Logout
+      </Button>
+    </Container>
   );
 }
 

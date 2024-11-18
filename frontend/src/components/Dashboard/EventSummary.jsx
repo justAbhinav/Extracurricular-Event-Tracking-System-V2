@@ -1,6 +1,13 @@
 // src/components/Dashboard/EventSummary.js
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  Button,
+  Typography,
+  Card,
+  CardContent,
+  Container,
+} from "@mui/material";
 
 function EventSummary() {
   const navigate = useNavigate();
@@ -10,17 +17,37 @@ function EventSummary() {
   ];
 
   return (
-    <div className="dashboard">
-      <button onClick={() => navigate("/organizer-dashboard")}>Back</button>
-      <h2>Event Summary</h2>
-      {pastEvents.map(event => (
-        <div key={event.id} className="event">
-          <h3>{event.name}</h3>
-          <p>Date: {event.date}</p>
-          <p>Participants: {event.participants}</p>
-        </div>
+    <Container className="normal-container">
+      <Button
+        variant="outlined"
+        color="primary"
+        size="large"
+        sx={{
+          marginBottom: "1rem",
+          color: "white",
+          borderColor: "whitesmoke",
+        }}
+        onClick={() => navigate("/organizer-dashboard")}
+      >
+        Back
+      </Button>
+      <Typography variant="h4" component="h2" sx={{marginBottom:"1rem", fontWeight:"500", fontFamily:"montserrat"}}>
+        Event Summary
+      </Typography>
+      {pastEvents.map((event) => (
+        <Card  key={event.id} variant="outlined" sx={{background:"linear-gradient(-45deg, #222966 ,#251938)", color:"whitesmoke", marginBottom:"1.2rem", minWidth:"12rem", textAlign:"center"}}>
+          <CardContent>
+            <Typography variant="h5" sx={{fontSize:"2rem", fontWeight:"500", fontFamily:"montserrat"}}>
+              {event.name}
+            </Typography>
+            <Typography variant="body1" sx={{fontSize:"1.4rem",fontFamily:"montserrat"}}><strong>Date:</strong> {event.date}</Typography>
+            <Typography variant="body1" sx={{fontSize:"1.4rem",fontFamily:"montserrat"}}>
+              <strong>Participants:</strong> {event.participants}
+            </Typography>
+          </CardContent>
+        </Card>
       ))}
-    </div>
+    </Container>
   );
 }
 

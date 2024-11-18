@@ -1,31 +1,72 @@
 import React from "react";
 import {
   Button,
-  TextField,
   Select,
   MenuItem,
   FormControl,
   InputLabel,
   Typography,
   Container,
+  Alert,
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
+import { auth, provider, signInWithPopup } from "./firebase";
 
 const OrganizerLogin = () => {
   const [role, setRole] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = () => {
-    // Your login logic here
+  const handleGoogleLogin = () => {
     setError("");
-    navigate("/organizer-dashboard");
+    if (!role) {
+      setError("Please select a role before logging in.");
+      return;
+    }
+
+    setLoading(true);
+
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        const email = result.user.email;
+
+        // Validate LNMIIT email domain
+        if (!email.endsWith("@lnmiit.ac.in")) {
+          setError("Only LNMIIT email addresses are allowed.");
+          setLoading(false);
+          return;
+        }
+        // Send email and role to the backend
+        fetch("http://localhost:5000/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, role }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            setLoading(false);
+            if (data.success) {
+              navigate("/organizer-dashboard"); // Redirect to the dashboard
+            } else {
+              setError(data.message || "Access Denied: Email not found.");
+            }
+          })
+          .catch(() => {
+            setError(
+              "An error occurred while verifying your login. Please try again."
+            );
+            setLoading(false);
+          });
+      })
+      .catch(() => {
+        setError("Google login failed. Please try again.");
+        setLoading(false);
+      });
   };
 
   return (
-    <Container maxWidth="lg" sx={{}} className="container">
+    <Container maxWidth="lg" className="container">
       <Button
         variant="outlined"
         color="primary"
@@ -39,9 +80,9 @@ const OrganizerLogin = () => {
         variant="h4"
         sx={{ fontFamily: "montserrat", marginBottom: "0.5rem" }}
       >
-        Organiser Login
+        Organizer Login
       </Typography>
-      {error && <Typography color="error">{error}</Typography>}
+
       <FormControl fullWidth margin="normal">
         <InputLabel
           sx={{
@@ -57,56 +98,32 @@ const OrganizerLogin = () => {
           sx={{
             color: "white",
             borderColor: "whitesmoke",
-            "& .MuiInputLabel-root": {
-              color: "whitesmoke", // Change the color of the label
-            },
-            "& .MuiOutlinedInput-notchedOutline": {
-              borderColor: "whitesmoke", // Change the border color
-            },
-            "&:hover .MuiOutlinedInput-notchedOutline": {
-              borderColor: "whitesmoke", // Change the border color on hover
-            },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              borderColor: "whitesmoke", // Change the border color when focused
-            },
-            "&": {
-              borderColor: "whitesmoke", // Change the border color when focused
-            },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: "whitesmoke" },
           }}
         >
-          <MenuItem value="Faculty">Faculty</MenuItem>
-          <MenuItem value="Administration">Administration</MenuItem>
-          <MenuItem value="GymKhana">GymKhana</MenuItem>
-          <MenuItem value="FestOrganiser">Fest Organiser</MenuItem>
-          <MenuItem value="Clubs">Clubs</MenuItem>
+          <MenuItem value="FACULTY">Faculty</MenuItem>
+          <MenuItem value="ADMINISTRATION">Administration</MenuItem>
+          <MenuItem value="GYMKHANA">GymKhana</MenuItem>
+          <MenuItem value="FEST_ORGANISER">Fest Organiser</MenuItem>
+          <MenuItem value="CLUBS">Clubs</MenuItem>
         </Select>
       </FormControl>
-      {/* <TextField
-        fullWidth
-        margin="normal"
-        type="email"
-        label="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Enter your Email"
-      />
-      <TextField
-        fullWidth
-        margin="normal"
-        type="password"
-        label="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="Enter your Password"
-      /> */}
+
       <Button
         variant="contained"
         color="success"
-        onClick={handleLogin}
-        sx={{ marginTop: "1.5rem" }}
+        onClick={handleGoogleLogin}
+        disabled={loading}
+        sx={{ margin: "1.5rem" }}
       >
-        Login with google
+        {loading ? "Logging in..." : "Login with Google"}
       </Button>
+
+      {error && (
+        <Alert severity="error" sx={{ marginBottom: "1rem" }}>
+          {error}
+        </Alert>
+      )}
     </Container>
   );
 };
