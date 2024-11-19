@@ -22,3 +22,4 @@ yarn-debug.log*
 yarn-error.log*
 
 .service-account-file.json
+.env

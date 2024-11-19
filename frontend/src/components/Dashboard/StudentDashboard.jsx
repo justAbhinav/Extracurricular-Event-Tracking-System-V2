@@ -47,7 +47,10 @@ function StudentDashboard() {
       <Button
         variant="contained"
         color="secondary"
-        onClick={() => navigate("/")}
+        onClick={() => {
+          localStorage.removeItem("authToken");
+          navigate("/");
+        }}
         sx={{
           marginTop: "6rem",
           minWidth: "220px",

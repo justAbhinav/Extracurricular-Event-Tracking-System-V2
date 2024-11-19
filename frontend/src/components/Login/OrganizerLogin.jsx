@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useContext } from "react";
 import {
   Button,
   Select,
@@ -11,12 +11,23 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { auth, provider, signInWithPopup } from "./firebase";
+import { UserContext } from "../../UserContext";
 
 const OrganizerLogin = () => {
   const [role, setRole] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
+  const { setUser } = useContext(UserContext);
+
+  useEffect(() => {
+    // Check for token in localStorage
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      // Optionally, verify the token with backend
+      navigate("/organizer-dashboard"); // Redirect if token is valid
+    }
+  }, [navigate]);
 
   const handleGoogleLogin = () => {
     setError("");
@@ -29,7 +40,10 @@ const OrganizerLogin = () => {
 
     signInWithPopup(auth, provider)
       .then((result) => {
+
         const email = result.user.email;
+        const name = result.user.displayName;
+
 
         // Validate LNMIIT email domain
         if (!email.endsWith("@lnmiit.ac.in")) {
@@ -47,6 +61,9 @@ const OrganizerLogin = () => {
           .then((data) => {
             setLoading(false);
             if (data.success) {
+              localStorage.setItem("email", email);
+              localStorage.setItem("name", name);
+              localStorage.setItem("authToken", data.token);
               navigate("/organizer-dashboard"); // Redirect to the dashboard
             } else {
               setError(data.message || "Access Denied: Email not found.");

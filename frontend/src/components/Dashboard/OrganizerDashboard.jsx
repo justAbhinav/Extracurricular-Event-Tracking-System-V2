@@ -1,19 +1,23 @@
 // src/components/Dashboard/OrganizerDashboard.js
-import React from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Container, Typography } from "@mui/material";
+import { UserContext } from "../../UserContext";
 
 function OrganizerDashboard() {
   const navigate = useNavigate();
+  const {  user, setUser } = useContext(UserContext);
 
   return (
     <Container className="dash-container" variant="large">
-      <Typography
-        variant="h4"
-        sx={{ fontWeight: "bold", marginBottom: "10rem" }}
-      >
-        Welcome to the Organizer Dashboard
-      </Typography>
+        {user || localStorage.getItem("name") && (
+          <Typography
+          variant="h4"
+          sx={{ fontWeight: "bold", marginBottom: "10rem", alignContent: "center" }}
+        > Hello! {localStorage.getItem("name")}
+            , Welcome to the Organizer Dashboard
+            </Typography>
+        )}
       <Button
         variant="contained"
         onClick={() => navigate("/add-event")}
@@ -61,7 +65,13 @@ function OrganizerDashboard() {
       <Button
         variant="contained"
         color="secondary"
-        onClick={() => navigate("/")}
+        onClick={() => {
+          localStorage.removeItem("authToken");
+          localStorage.removeItem("name");
+          localStorage.removeItem("email");
+          setUser(null);
+          navigate("/");
+        }}
         sx={{
           marginTop: "6rem",
           minWidth: "220px",

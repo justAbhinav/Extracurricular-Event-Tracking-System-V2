@@ -1,10 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Typography,
   Container,
   Alert,
@@ -16,6 +12,15 @@ function StudentLogin() {
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check for token in localStorage
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      // Optionally, verify the token with backend
+      navigate("/organizer-dashboard"); // Redirect if token is valid
+    }
+  }, [navigate]);
 
   const handleGoogleLogin = () => {
     setError("");
@@ -32,6 +37,7 @@ function StudentLogin() {
           setLoading(false);
           return;
         } else {
+          localStorage.setItem("authToken", "student");
           navigate("/student-dashboard");
         }
       })

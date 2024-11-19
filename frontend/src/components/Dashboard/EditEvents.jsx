@@ -1,66 +1,114 @@
-// src/components/Dashboard/EditEvents.js
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button, Container, Typography, Box, TextField } from "@mui/material";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Update the path if different
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  updateDoc,
+  Timestamp,
+} from "firebase/firestore";
+import {
+  Button,
+  TextField,
+  Container,
+  Typography,
+  Box,
+  MenuItem,
+} from "@mui/material";
+import { app } from "../Login/firebase.js";
 
-function EditEvents() {
-  const [events, setEvents] = useState([
-    // Sample data
-    {
-      id: 1,
-      name: "Tech Talk",
-      organizer: "CS Dept",
-      venue: "Hall A",
-      startTime: "2024-11-22T10:00",
-      endTime: "2024-11-22T12:00",
-    },
-  ]);
-  const [originalEvents, setOriginalEvents] = useState([]);
-  const [isChanged, setIsChanged] = useState(false);
+function EditEvent() {
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
   const navigate = useNavigate();
 
+  const db = getFirestore(app);
   useEffect(() => {
-    setOriginalEvents(JSON.parse(JSON.stringify(events)));
+    // Fetch events where host matches localStorage.getItem("name")
+    const fetchEvents = async () => {
+      try {
+        const host = localStorage.getItem("name");
+        if (!host) {
+          alert("Host name not found in localStorage.");
+          return;
+        }
+
+        const eventsRef = collection(db, "EVENTS");
+        const q = query(eventsRef, where("host", "==", host));
+        const querySnapshot = await getDocs(q);
+
+        const fetchedEvents = [];
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          fetchedEvents.push({
+            id: doc.id,
+            ...data,
+            // Convert Firestore Timestamps to ISO strings
+            startTime: data.startTime?.toDate().toISOString().slice(0, 16),
+            endTime: data.endTime?.toDate().toISOString().slice(0, 16),
+          });
+        });
+
+        setEvents(fetchedEvents);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        alert("Failed to fetch events. Please try again.");
+      }
+    };
+
+    fetchEvents();
   }, []);
 
-  const handleSave = () => {
-    // Logic to save event
-    console.log("Saving events", events);
-    setOriginalEvents(JSON.parse(JSON.stringify(events)));
-    setIsChanged(false);
-  };
-
-  const handleCancelChanges = () => {
-    setEvents(JSON.parse(JSON.stringify(originalEvents)));
-    setIsChanged(false);
-  };
-
-  const handleDelete = (eventId) => {
-    if (window.confirm("Are you sure you want to delete this event?")) {
-      setEvents(events.filter((event) => event.id !== eventId));
-      setIsChanged(true);
+  const handleSaveChanges = async () => {
+    if (!selectedEvent) {
+      alert("No event selected for editing.");
+      return;
     }
-  };
 
-  const handleNavigate = () => {
-    if (isChanged) {
-      if (
-        window.confirm(
-          "You have unsaved changes. Are you sure you want to leave without saving?"
-        )
-      ) {
-        navigate("/organizer-dashboard");
-      }
-    } else {
+    const { id, name, venue, startTime, endTime } = selectedEvent;
+
+    // Validate input fields
+    if (!name || !venue || !startTime || !endTime) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    const startTimestamp = Timestamp.fromDate(new Date(startTime));
+    const endTimestamp = Timestamp.fromDate(new Date(endTime));
+
+    if (startTimestamp < Timestamp.now()) {
+      alert("Start time cannot be in the past.");
+      return;
+    }
+
+    if (endTimestamp <= startTimestamp) {
+      alert("End time must be later than start time.");
+      return;
+    }
+
+    try {
+      const eventDocRef = doc(db, "events", id);
+      await updateDoc(eventDocRef, {
+        name,
+        venue,
+        startTime: startTimestamp,
+        endTime: endTimestamp,
+      });
+
+      alert("Event updated successfully!");
       navigate("/organizer-dashboard");
+    } catch (error) {
+      console.error("Error updating event:", error);
+      alert("Failed to update the event. Please try again.");
     }
   };
 
-  const handleChange = (eventId, field, value) => {
-    setEvents(
-      events.map((ev) => (ev.id === eventId ? { ...ev, [field]: value } : ev))
-    );
-    setIsChanged(true);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setSelectedEvent((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
@@ -75,7 +123,7 @@ function EditEvents() {
             color: "white",
             borderColor: "whitesmoke",
           }}
-          onClick={handleNavigate}
+          onClick={() => navigate("/organizer-dashboard")}
         >
           Back
         </Button>
@@ -83,16 +131,20 @@ function EditEvents() {
           variant="h4"
           sx={{ fontFamily: "montserrat", marginBottom: "0.5rem" }}
         >
-          Edit Events
+          Edit Event
         </Typography>
-        {events.map((event) => (
-          <Box key={event.id} mb={2} width="100%">
+        {events.length > 0 ? (
+          <>
             <TextField
-              label="Event Name"
-              variant="outlined"
+              select
+              label="Select Event"
               fullWidth
               margin="normal"
-              value={event.name}
+              value={selectedEvent?.id || ""}
+              onChange={(e) => {
+                const event = events.find((evt) => evt.id === e.target.value);
+                setSelectedEvent(event);
+              }}
               InputLabelProps={{
                 style: { color: "whitesmoke" },
               }}
@@ -113,129 +165,154 @@ function EditEvents() {
                   },
                 },
               }}
-              onChange={(e) => handleChange(event.id, "name", e.target.value)}
-            />
-            <TextField
-              label="Venue"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={event.venue}
-              InputLabelProps={{
-                style: { color: "whitesmoke" },
-              }}
-              sx={{
-                width: "100%",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&": {
-                    color: "whitesmoke",
-                  },
-                },
-              }}
-              onChange={(e) => handleChange(event.id, "venue", e.target.value)}
-            />
-            <TextField
-              label="Start Time"
-              type="datetime-local"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={event.startTime}
-              InputLabelProps={{
-                style: { color: "whitesmoke" },
-                shrink: true,
-              }}
-              sx={{
-                width: "100%",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&": {
-                    color: "whitesmoke",
-                  },
-                },
-              }}
-              onChange={(e) =>
-                handleChange(event.id, "startTime", e.target.value)
-              }
-            />
-            <TextField
-              label="End Time"
-              type="datetime-local"
-              variant="outlined"
-              fullWidth
-              margin="normal"
-              value={event.endTime}
-              InputLabelProps={{
-                style: { color: "whitesmoke" },
-                shrink: true,
-              }}
-              sx={{
-                width: "100%",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&:hover fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "whitesmoke",
-                  },
-                  "&": {
-                    color: "whitesmoke",
-                  },
-                },
-              }}
-              onChange={(e) =>
-                handleChange(event.id, "endTime", e.target.value)
-              }
-            />
-            <Box display="flex" justifyContent="space-between" mt={2}>
-              <Button
-                variant="contained"
-                color="success"
-                onClick={handleSave}
-                disabled={!isChanged}
-              >
-                Save
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={handleCancelChanges}
-              >
-                Cancel Changes
-              </Button>
-              <Button
-                variant="contained"
-                color="error"
-                onClick={() => handleDelete(event.id)}
-              >
-                Delete
-              </Button>
-            </Box>
-          </Box>
-        ))}
+            >
+              {events.map((event) => (
+                <MenuItem key={event.id} value={event.id}>
+                  {event.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            {selectedEvent && (
+              <>
+                <TextField
+                  label="Event Name"
+                  name="name"
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  value={selectedEvent.name}
+                  onChange={handleChange}
+                  InputLabelProps={{
+                    style: { color: "whitesmoke" },
+                  }}
+                  sx={{
+                    width: "100%",
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&": {
+                        color: "whitesmoke",
+                      },
+                    },
+                  }}
+                />
+                <TextField
+                  label="Venue"
+                  name="venue"
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  value={selectedEvent.venue}
+                  onChange={handleChange}
+                  InputLabelProps={{
+                    style: { color: "whitesmoke" },
+                  }}
+                  sx={{
+                    width: "100%",
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&": {
+                        color: "whitesmoke",
+                      },
+                    },
+                  }}
+                />
+                <TextField
+                  label="Start Time"
+                  name="startTime"
+                  type="datetime-local"
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  value={selectedEvent.startTime}
+                  onChange={handleChange}
+                  InputLabelProps={{
+                    style: { color: "whitesmoke" },
+                    shrink: true,
+                  }}
+                  sx={{
+                    width: "100%",
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&": {
+                        color: "whitesmoke",
+                      },
+                    },
+                  }}
+                />
+                <TextField
+                  label="End Time"
+                  name="endTime"
+                  type="datetime-local"
+                  variant="outlined"
+                  fullWidth
+                  margin="normal"
+                  value={selectedEvent.endTime}
+                  onChange={handleChange}
+                  InputLabelProps={{
+                    style: { color: "whitesmoke" },
+                    shrink: true,
+                  }}
+                  sx={{
+                    width: "100%",
+                    "& .MuiOutlinedInput-root": {
+                      "& fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "whitesmoke",
+                      },
+                      "&": {
+                        color: "whitesmoke",
+                      },
+                    },
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleSaveChanges}
+                  color="success"
+                  sx={{ mt: 4 }}
+                >
+                  Save Changes
+                </Button>
+              </>
+            )}
+          </>
+        ) : (
+          <Typography variant="body1" sx={{ mt: 4 }}>
+            No events found for the current host.
+          </Typography>
+        )}
       </Box>
     </Container>
   );
 }
 
-export default EditEvents;
+export default EditEvent;
